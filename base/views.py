@@ -1,13 +1,12 @@
 from django.shortcuts import render, redirect # This will allow us to render html files and redirect to other pages
 from django.http import HttpResponse # This will allow us to return an http response
 from django.contrib.auth.decorators import login_required # This will make it so that you have to be logged in to view the page
-from django.contrib.auth.models import User # This will allow us to use the User model
+#from django.contrib.auth.models import User # This will allow us to use the User model
 from django.contrib import messages # This will allow us to send messages to the user
 from django.contrib.auth import authenticate, login, logout # This will allow us to authenticate, login, and logout users
-from django.contrib.auth.forms import UserCreationForm # This will allow us to use the UserCreationForm form (for registration)
 from django.db.models import Q # This will allow us to use the Q object to search for rooms by topic name or room name or room description
-from .models import Room, Topic, Message # This will allow us to use the Room and Topic models
-from .forms import RoomForm, UserForm # This will allow us to use the RoomForm and UserForm forms
+from .models import Room, Topic, Message, User # This will allow us to use the Room and Topic models
+from .forms import RoomForm, UserForm, MyUserCreationForm # This will allow us to use the RoomForm and UserForm forms
 
 # Create your views here.
 
@@ -23,21 +22,21 @@ def loginPage(request):
         return redirect('home')
 
     if request.method == "POST":
-        username = request.POST.get('username').lower()
+        email = request.POST.get('email').lower()
         password = request.POST.get('password')
         
         try:
-            user = User.objects.get(username=username)
+            user = User.objects.get(email=email)
         except:
-            messages.error(request, 'Username does not exist')
+            messages.error(request, 'User does not exist')
 
-        user = authenticate(request, username=username, password=password)
+        user = authenticate(request, email=email, password=password)
 
         if user is not None:
             login(request, user)
             return redirect('home')
         else:
-            messages.error(request, 'Username OR password is incorrect')
+            messages.error(request, 'Email OR password is incorrect')
         
 
     context = {'page': page}
@@ -48,10 +47,10 @@ def logoutUser(request):
     return redirect('login')
 
 def registerPage(request):
-    form = UserCreationForm() # This will create a form with the fields username, password1, and password2
+    form = MyUserCreationForm() # This will create a form with the fields username, password1, and password2
 
     if request.method == "POST":
-        form = UserCreationForm(request.POST)
+        form = MyUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False) # This will create the user but not save it to the database yet  
             user.username = user.username.lower() # This will make the username lowercase
@@ -196,7 +195,7 @@ def updateUser(request):
     context = {'form': form}
 
     if request.method == "POST":
-        form = UserForm(request.POST, instance=user)
+        form = UserForm(request.POST, request.FILES, instance=user)
         if form.is_valid():
             form.save()
             return redirect('user-profile', pk=user.id)
